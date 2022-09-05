@@ -5,19 +5,21 @@ import com.example.appwebhooktelegrambot.payload.ResultTelegram;
 import com.example.appwebhooktelegrambot.user.TelegramUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.util.ResourceUtils;
 import org.springframework.web.client.RestTemplate;
-import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
-import org.telegram.telegrambots.meta.api.objects.*;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.*;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.*;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
+import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -63,10 +65,10 @@ public class WebhookService {
         inlineKeyboardButton3.setText("\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F English");
         inlineKeyboardButton3.setCallbackData("en");
 
-        List<InlineKeyboardButton> keyboardButtons1 = new ArrayList<>(List.of(inlineKeyboardButton1));
-        List<InlineKeyboardButton> keyboardButtons2 = new ArrayList<>(List.of(inlineKeyboardButton2));
-        List<InlineKeyboardButton> keyboardButtons3 = new ArrayList<>(List.of(inlineKeyboardButton3));
-        List<List<InlineKeyboardButton>> rowList = new ArrayList<>(List.of(keyboardButtons1, keyboardButtons2, keyboardButtons3));
+        List<List<InlineKeyboardButton>> rowList = new ArrayList<>(List.of(
+                new ArrayList<>(List.of(inlineKeyboardButton1)),
+                new ArrayList<>(List.of(inlineKeyboardButton2)),
+                new ArrayList<>(List.of(inlineKeyboardButton3))));
         inlineKeyboardMarkup.setKeyboard(rowList);
         sendMessage.setReplyMarkup(inlineKeyboardMarkup);
 
@@ -92,85 +94,6 @@ public class WebhookService {
         }
         sendMessage.setChatId(chatId);
         sendMessage.setText(textLang);
-        sendSendMessage(sendMessage);
-    }
-
-    public void checkPhoneNumber(Update update) {
-        List<String> numbers = new ArrayList<>(List.of("+998914748739",
-                "+998935017758",
-                "+998973569700"));
-
-        String phoneNumber = update.getMessage().getContact().getPhoneNumber();
-
-        String chatId = String.valueOf(update.getMessage().getChatId());
-
-        sendMessage.setChatId(chatId);
-        if (numbers.contains(phoneNumber)) {
-            sendMessage.setText("\uD83D\uDC49 Biz sizga (" + phoneNumber.substring(0, 6) + "****" + phoneNumber.substring(10) + ") SMS orqali kod yubordik.\n\nQuyidagi tugamani bosing va raqaminggizni tasdiqlang \uD83D\uDC47");
-            InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
-
-            InlineKeyboardButton inlineKeyboardButton1 = new InlineKeyboardButton();
-
-            inlineKeyboardButton1.setText("\uD83D\uDD22 Kodni kritish");
-            inlineKeyboardButton1.setCallbackData("code");
-            InlineKeyboardButton inlineKeyboardButton2 = new InlineKeyboardButton();
-            inlineKeyboardButton2.setText("\uD83E\uDD14 SMS xabar kelmadi.");
-            inlineKeyboardButton2.setCallbackData("reSend");
-
-            AnswerCallbackQuery answerCallbackQuery = new AnswerCallbackQuery();
-            answerCallbackQuery.setCallbackQueryId(update.getCallbackQuery().getId());
-            answerCallbackQuery.setText("Text");
-            answerCallbackQuery.setShowAlert(true);
-
-
-            InlineKeyboardButton inlineKeyboardButton3 = new InlineKeyboardButton();
-            inlineKeyboardButton3.setText("❌ Bekor qilish.");
-            inlineKeyboardButton3.setCallbackData("cancel");
-
-
-            List<List<InlineKeyboardButton>> rowList = new ArrayList<>(List.of(
-                    new ArrayList<>(List.of(inlineKeyboardButton1)),
-                    new ArrayList<>(List.of(inlineKeyboardButton2)),
-                    new ArrayList<>(List.of(inlineKeyboardButton3))));
-            inlineKeyboardMarkup.setKeyboard(rowList);
-            sendMessage.setReplyMarkup(inlineKeyboardMarkup);
-        } else {
-            sendMessage.setText("Uzr siz botimizdan foydalana olmaysiz!");
-        }
-        sendSendMessage(sendMessage);
-    }
-
-    public void checkSendCodeResend(Update update) {
-        if (update.getCallbackQuery().getData().equals("reSend")) {
-
-            String chatId = String.valueOf(update.getCallbackQuery().getMessage().getChatId());
-            sendMessage.setChatId(chatId);
-            sendMessage.enableHtml(true);
-            sendMessage.setText("Sizga qayta kod yuborildi.");
-
-            sendSendMessage(sendMessage);
-        }
-    }
-
-
-    public void checkUserCode(Update update) {
-        List<String> codes = new ArrayList<>();
-        codes.add("123456");
-        codes.add("123457");
-        String code = update.getMessage().getText();
-        SendMessage sendMessage = new SendMessage();
-        sendMessage.setChatId(String.valueOf(update.getMessage().getChatId()));
-        if (codes.contains(code)) {
-            sendMessage.setText("Muvafaqiyatli ro'yhatdan o'tdingiz.\nQo'shimcha imkoniyatlarimiz. /Menu");
-        } else {
-            sendMessage.setText("Kod xato kritildi.\nIltimos Tekshirib boshidan kriting.");
-        }
-        sendSendMessage(sendMessage);
-    }
-
-    public void enterYourCode(Update update) {
-        String chatId = String.valueOf(update.getCallbackQuery().getMessage().getChatId());
-        SendMessage sendMessage = new SendMessage(chatId, "SMS kodni kriting.");
         sendSendMessage(sendMessage);
     }
 
@@ -220,30 +143,14 @@ public class WebhookService {
         sendSendMessage(sendMessage);
     }
 
-    public void getDefaultAnswers(Update update) {
-        sendMessage = new SendMessage(String.valueOf(update.getMessage().getChatId()), "Noto'g'ri so'rov.");
-        sendSendMessage(sendMessage);
-    }
-
-    public void shareContactCanceled(Update update) {
-        if (update.getCallbackQuery().getData().equals("cancel")) {
-            String chatId = String.valueOf(update.getCallbackQuery().getMessage().getChatId());
-            sendMessage.setChatId(chatId);
-            sendMessage.setText("Raqam jo'natish bekor qilindi.");
-        }
-    }
-
-    public void getTradeIn(long chatId, String imageCaption, String imagePath) throws FileNotFoundException {
+    public void getTradeIn(Update update) throws FileNotFoundException {
         SendPhoto sendPhoto = new SendPhoto();
-
-        sendPhoto.setChatId(String.valueOf(chatId));
-        sendPhoto.setPhoto(new InputFile(new File("C:\\Users\\Davron\\IdeaProjects\\Projects-master\\app-webhook-telegrambot\\src\\main\\resources\\static\\images\\book.png")));
+        sendPhoto.setChatId(String.valueOf(update.getMessage().getChatId()));
+        InputFile inputFile = new InputFile();
+        inputFile.setMedia(new File("D:\\book.png"));
+        sendPhoto.setPhoto(inputFile);
         sendSendPhoto(sendPhoto);
     }
-
-
-    //Answer to bot
-
 
     public void getAksiyalar(Update update) {
         String chatId = String.valueOf(update.getMessage().getChatId());
@@ -287,12 +194,9 @@ public class WebhookService {
         KeyboardRow keyboardRow11 = new KeyboardRow();
         keyboardRow11.add(new KeyboardButton("\uD83C\uDFE0 Бош меню"));
 
-        List<KeyboardRow> keyboardRowList = new ArrayList<>(List.of(keyboardRow1,
-                keyboardRow2, keyboardRow3, keyboardRow4,
-                keyboardRow5,
-                keyboardRow6,
-                keyboardRow7,
-                keyboardRow8,
+        List<KeyboardRow> keyboardRowList = new ArrayList<>(List.of(
+                keyboardRow1, keyboardRow2, keyboardRow3, keyboardRow4,
+                keyboardRow5, keyboardRow6, keyboardRow7, keyboardRow8,
                 keyboardRow9, keyboardRow10, keyboardRow11));
 
         replyKeyboardMarkup.setKeyboard(keyboardRowList);
@@ -300,13 +204,17 @@ public class WebhookService {
         sendSendMessage(sendMessage);
     }
 
+    public void getDefaultAnswers(Update update) {
+        sendMessage = new SendMessage(String.valueOf(update.getMessage().getChatId()), "Noto'g'ri so'rov.");
+        sendSendMessage(sendMessage);
+    }
 
     public void sendSendMessage(SendMessage sendMessage) {
         restTemplate.postForObject("https://api.telegram.org/bot" + botConfig.getToken() + "/sendMessage", sendMessage, ResultTelegram.class);
     }
 
     public void sendSendPhoto(SendPhoto sendPhoto) {
-        restTemplate.postForObject("https://api.telegram.org/bot" + botConfig.getToken() + "/sendPhoto", sendPhoto, ResultTelegram.class);
+        restTemplate.postForObject("https://api.telegram.org/bot" + botConfig.getToken() + "/sendMessage", sendPhoto, ResultTelegram.class);
     }
 }
 

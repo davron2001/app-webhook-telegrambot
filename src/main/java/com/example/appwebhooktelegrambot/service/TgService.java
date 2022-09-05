@@ -22,10 +22,7 @@ public class TgService {
         if (update.hasMessage()) {
             if (update.getMessage().hasText()) {
                 String text = update.getMessage().getText();
-                long chatId = update.getMessage().getChatId();
-                if (checkCode(text)) {
-                    webhookService.checkUserCode(update);
-                }
+                String chatId = String.valueOf(update.getMessage().getChatId());
                 switch (text) {
                     case "/start":
                         webhookService.whenStart(update);
@@ -35,7 +32,7 @@ public class TgService {
                         webhookService.getAllMenus(update);
                         break;
                     case "Trade-In":
-                        webhookService.getTradeIn(chatId, "Hello", "static/images/book.png");
+                        webhookService.getTradeIn(update);
                         break;
                     case "Aksiyalar":
                         webhookService.getAksiyalar(update);
@@ -44,8 +41,6 @@ public class TgService {
                         webhookService.getDefaultAnswers(update);
                         break;
                 }
-//            } else if (update.getMessage().hasContact()) {
-//                webhookService.checkPhoneNumber(update);
             }
         }
 
@@ -57,15 +52,6 @@ public class TgService {
                 case "Trade-In":
 
                     break;
-                case "code":
-                    webhookService.enterYourCode(update);
-                    break;
-                case "reSend":
-                    webhookService.checkSendCodeResend(update);
-                    break;
-                case "cancel":
-                    webhookService.shareContactCanceled(update);
-                    break;
                 // Aslida step berilsa yetadi shu yerda.
                 case "uzb":
                 case "ru":
@@ -75,13 +61,5 @@ public class TgService {
                     break;
             }
         }
-    }
-
-    public boolean checkCode(String text) {  // bazada tekshiriladi. Bu hozircha example
-        if (text.length() != 6) return false;
-        for (char c : text.toCharArray()) {
-            if (Character.isAlphabetic(c)) return false;
-        }
-        return true;
     }
 }
