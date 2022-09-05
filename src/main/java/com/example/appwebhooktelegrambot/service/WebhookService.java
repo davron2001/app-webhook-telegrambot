@@ -1,171 +1,157 @@
 package com.example.appwebhooktelegrambot.service;
 
-import com.example.appwebhooktelegrambot.RestConstants;
+import com.example.appwebhooktelegrambot.config.BotConfig;
 import com.example.appwebhooktelegrambot.payload.ResultTelegram;
+import com.example.appwebhooktelegrambot.user.TelegramUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ResourceUtils;
 import org.springframework.web.client.RestTemplate;
+import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Contact;
-import org.telegram.telegrambots.meta.api.objects.Message;
-import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.objects.*;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.*;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class WebhookService {
 
+    List<TelegramUser> userList = new ArrayList<>();
+
     private final RestTemplate restTemplate;
+    private final BotConfig botConfig;
+    SendMessage sendMessage = new SendMessage();
+
+    public TelegramUser checkUserWithChatId(Update update) {
+        String chatId = "";
+        if (update.hasMessage()) {
+            chatId = String.valueOf(update.getMessage().getChatId());
+        } else if (update.hasCallbackQuery()) {
+            chatId = String.valueOf(update.getCallbackQuery().getMessage().getChatId());
+        }
+        if (chatId.length() > 2) {
+            for (TelegramUser user : userList) {
+                if (user.getUserTelegramId().equals(chatId)) {
+                    return user;
+                }
+            }
+            TelegramUser telegramUser = new TelegramUser();
+            telegramUser.setUserTelegramId(chatId);
+            userList.add(telegramUser);
+            return telegramUser;
+        } else {
+            return new TelegramUser();
+        }
+
+    }
 
     public void whenStart(Update update) {
         SendMessage sendMessage = new SendMessage(String.valueOf(update.getMessage().getChatId()), "Muloqot uchun tilni tanlang. \n\nВыбор языка для общения. \n\nChoosing a language for communication.");
-
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
-        InlineKeyboardButton inlineKeyboardButton1 = new InlineKeyboardButton();
-        inlineKeyboardButton1.setText("\uD83C\uDDFA\uD83C\uDDFF O'zbekcha");
+        InlineKeyboardButton inlineKeyboardButton1 = new InlineKeyboardButton("\uD83C\uDDFA\uD83C\uDDFF O'zbekcha");
         inlineKeyboardButton1.setCallbackData("uzb");
-        InlineKeyboardButton inlineKeyboardButton2 = new InlineKeyboardButton();
-        inlineKeyboardButton2.setText("\uD83C\uDDF7\uD83C\uDDFA Русский");
+        InlineKeyboardButton inlineKeyboardButton2 = new InlineKeyboardButton("\uD83C\uDDF7\uD83C\uDDFA Русский");
         inlineKeyboardButton2.setCallbackData("ru");
         InlineKeyboardButton inlineKeyboardButton3 = new InlineKeyboardButton();
         inlineKeyboardButton3.setText("\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F English");
         inlineKeyboardButton3.setCallbackData("en");
 
-        List<InlineKeyboardButton> keyboardButtons1 = new ArrayList<>();
-        keyboardButtons1.add(inlineKeyboardButton1);
-        List<InlineKeyboardButton> keyboardButtons2 = new ArrayList<>();
-        keyboardButtons2.add(inlineKeyboardButton2);
-        List<InlineKeyboardButton> keyboardButtons3 = new ArrayList<>();
-        keyboardButtons3.add(inlineKeyboardButton3);
-        List<List<InlineKeyboardButton>> rowList = new ArrayList<>();
-        rowList.add(keyboardButtons1);
-        rowList.add(keyboardButtons2);
-        rowList.add(keyboardButtons3);
+        List<InlineKeyboardButton> keyboardButtons1 = new ArrayList<>(List.of(inlineKeyboardButton1));
+        List<InlineKeyboardButton> keyboardButtons2 = new ArrayList<>(List.of(inlineKeyboardButton2));
+        List<InlineKeyboardButton> keyboardButtons3 = new ArrayList<>(List.of(inlineKeyboardButton3));
+        List<List<InlineKeyboardButton>> rowList = new ArrayList<>(List.of(keyboardButtons1, keyboardButtons2, keyboardButtons3));
         inlineKeyboardMarkup.setKeyboard(rowList);
         sendMessage.setReplyMarkup(inlineKeyboardMarkup);
 
-        ResultTelegram o = restTemplate.postForObject(RestConstants.TELEGRAM_BASE_URL + RestConstants.BOT_TOKEN + "/sendMessage", sendMessage, ResultTelegram.class);
-
+        sendSendMessage(sendMessage);
     }
 
     public void whenChooseLanguage(Update update) {
-        String callBackLanguage = update.getCallbackQuery().getData();
-        String chatId;
-        String text = "";
-        SendMessage sendMessage;
-        switch (callBackLanguage) {
+        String chatId = String.valueOf(update.getCallbackQuery().getMessage().getChatId());
+        String textLang = "";
+        switch (update.getCallbackQuery().getData()) {
             case "uzb":
-                chatId = String.valueOf(update.getCallbackQuery().getMessage().getChatId());
-                text = "\uD83C\uDDFA\uD83C\uDDFF O'zbek tili tanlandi.";
-                sendMessage = new SendMessage(chatId, text);
-                restTemplate.postForObject(RestConstants.TELEGRAM_BASE_URL + RestConstants.BOT_TOKEN + "/sendMessage", sendMessage, ResultTelegram.class);
-                text = "Telegram yoqilgan telefon raqaminggizni kontakt ko'rinishida jo'nating.\nBuning uchun Telefon raqamimni yuborish tugmasini bosing";
-                SendMessage sendMessage1 = new SendMessage(chatId, text);
-                ResultTelegram resultTelegram = restTemplate.postForObject(RestConstants.TELEGRAM_BASE_URL + RestConstants.BOT_TOKEN + "/sendMessage", sendMessage1, ResultTelegram.class);
-
-                shareContact(chatId);
-
+                textLang = "\uD83C\uDDFA\uD83C\uDDFF O'zbek tili tanlandi.";
                 break;
             case "ru":
-                chatId = String.valueOf(update.getCallbackQuery().getMessage().getChatId());
-                text = "\uD83C\uDDF7\uD83C\uDDFA Был выбран узбекский язык.";
-                sendMessage = new SendMessage(chatId, text);
-                restTemplate.postForObject(RestConstants.TELEGRAM_BASE_URL + RestConstants.BOT_TOKEN + "/sendMessage", sendMessage, ResultTelegram.class);
-                text = "Отправьте свой номер телефона с поддержкой Telegram в контактной форме.\n" +
-                        "Для этого нажмите кнопку Отправить мой номер телефона";
-                sendMessage1 = new SendMessage(chatId, text);
-                restTemplate.postForObject(RestConstants.TELEGRAM_BASE_URL + RestConstants.BOT_TOKEN + "/sendMessage", sendMessage1, ResultTelegram.class);
+                textLang = "\uD83C\uDDF7\uD83C\uDDFA Был выбран узбекский язык.";
                 break;
             case "en":
-                chatId = String.valueOf(update.getCallbackQuery().getMessage().getChatId());
-                text = "\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F The Uzbek language was selected.";
-                sendMessage = new SendMessage(chatId, text);
-                restTemplate.postForObject(RestConstants.TELEGRAM_BASE_URL + RestConstants.BOT_TOKEN + "/sendMessage", sendMessage, ResultTelegram.class);
-                text = "Send your Telegram-enabled phone number in the contact form.\n" +
-                        "To do this, click the Send my phone number button";
-                sendMessage1 = new SendMessage(chatId, text);
-                restTemplate.postForObject(RestConstants.TELEGRAM_BASE_URL + RestConstants.BOT_TOKEN + "/sendMessage", sendMessage1, ResultTelegram.class);
+                textLang = "\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F The Uzbek language was selected.";
                 break;
             default:
-
+                textLang = "Bizda bunday til mavjud emas. \nKerakli tilni tugamasini bosing.";
                 break;
-
-
         }
-    }
-
-    public void shareContact(String chatId) {
-
-        SendMessage sendMessage = new SendMessage(chatId, "Checking your phone!!!");
-
-        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
-        replyKeyboardMarkup.setSelective(true);
-        replyKeyboardMarkup.setResizeKeyboard(true);
-
-        List<KeyboardRow> keyboardRowList = new ArrayList<>();
-
-        KeyboardRow keyboardRowF = new KeyboardRow();
-
-        KeyboardButton keyboardButton = new KeyboardButton();
-
-        keyboardButton.setText("Share contact");
-        keyboardButton.setRequestContact(true);
-
-        keyboardRowF.add(keyboardButton);
-        keyboardRowList.add(keyboardRowF);
-        replyKeyboardMarkup.setKeyboard(keyboardRowList);
-        sendMessage.setReplyMarkup(replyKeyboardMarkup);
-        restTemplate.postForObject(RestConstants.TELEGRAM_BASE_URL + RestConstants.BOT_TOKEN + "/sendMessage", sendMessage, ResultTelegram.class);
+        sendMessage.setChatId(chatId);
+        sendMessage.setText(textLang);
+        sendSendMessage(sendMessage);
     }
 
     public void checkPhoneNumber(Update update) {
-        List<String> numbers = new ArrayList<>();
-        numbers.add("+998914748739");
-        numbers.add("+998935017758");
+        List<String> numbers = new ArrayList<>(List.of("+998914748739",
+                "+998935017758",
+                "+998973569700"));
+
         String phoneNumber = update.getMessage().getContact().getPhoneNumber();
-        SendMessage sendMessage = new SendMessage();
+
         String chatId = String.valueOf(update.getMessage().getChatId());
+
         sendMessage.setChatId(chatId);
         if (numbers.contains(phoneNumber)) {
-            String textForCode = "\uD83D\uDC49 Biz sizga (" + phoneNumber.substring(0, 6) + "****" + phoneNumber.substring(10) + ") SMS orqali kod yubordik.\n\nQuyidagi tugamani bosing va raqaminggizni tasdiqlang \uD83D\uDC47";
-            sendMessage.setText(textForCode);
-
+            sendMessage.setText("\uD83D\uDC49 Biz sizga (" + phoneNumber.substring(0, 6) + "****" + phoneNumber.substring(10) + ") SMS orqali kod yubordik.\n\nQuyidagi tugamani bosing va raqaminggizni tasdiqlang \uD83D\uDC47");
             InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+
             InlineKeyboardButton inlineKeyboardButton1 = new InlineKeyboardButton();
+
             inlineKeyboardButton1.setText("\uD83D\uDD22 Kodni kritish");
             inlineKeyboardButton1.setCallbackData("code");
             InlineKeyboardButton inlineKeyboardButton2 = new InlineKeyboardButton();
             inlineKeyboardButton2.setText("\uD83E\uDD14 SMS xabar kelmadi.");
             inlineKeyboardButton2.setCallbackData("reSend");
+
+            AnswerCallbackQuery answerCallbackQuery = new AnswerCallbackQuery();
+            answerCallbackQuery.setCallbackQueryId(update.getCallbackQuery().getId());
+            answerCallbackQuery.setText("Text");
+            answerCallbackQuery.setShowAlert(true);
+
+
             InlineKeyboardButton inlineKeyboardButton3 = new InlineKeyboardButton();
             inlineKeyboardButton3.setText("❌ Bekor qilish.");
             inlineKeyboardButton3.setCallbackData("cancel");
 
-            List<InlineKeyboardButton> keyboardButtons1 = new ArrayList<>();
-            keyboardButtons1.add(inlineKeyboardButton1);
-            List<InlineKeyboardButton> keyboardButtons2 = new ArrayList<>();
-            keyboardButtons2.add(inlineKeyboardButton2);
-            List<InlineKeyboardButton> keyboardButtons3 = new ArrayList<>();
-            keyboardButtons3.add(inlineKeyboardButton3);
-            List<List<InlineKeyboardButton>> rowList = new ArrayList<>();
-            rowList.add(keyboardButtons1);
-            rowList.add(keyboardButtons2);
-            rowList.add(keyboardButtons3);
+
+            List<List<InlineKeyboardButton>> rowList = new ArrayList<>(List.of(
+                    new ArrayList<>(List.of(inlineKeyboardButton1)),
+                    new ArrayList<>(List.of(inlineKeyboardButton2)),
+                    new ArrayList<>(List.of(inlineKeyboardButton3))));
             inlineKeyboardMarkup.setKeyboard(rowList);
             sendMessage.setReplyMarkup(inlineKeyboardMarkup);
         } else {
             sendMessage.setText("Uzr siz botimizdan foydalana olmaysiz!");
         }
-        ResultTelegram o = restTemplate.postForObject(RestConstants.TELEGRAM_BASE_URL + RestConstants.BOT_TOKEN + "/sendMessage", sendMessage, ResultTelegram.class);
-        System.out.println(update);
+        sendSendMessage(sendMessage);
     }
+
+    public void checkSendCodeResend(Update update) {
+        if (update.getCallbackQuery().getData().equals("reSend")) {
+
+            String chatId = String.valueOf(update.getCallbackQuery().getMessage().getChatId());
+            sendMessage.setChatId(chatId);
+            sendMessage.enableHtml(true);
+            sendMessage.setText("Sizga qayta kod yuborildi.");
+
+            sendSendMessage(sendMessage);
+        }
+    }
+
 
     public void checkUserCode(Update update) {
         List<String> codes = new ArrayList<>();
@@ -174,12 +160,153 @@ public class WebhookService {
         String code = update.getMessage().getText();
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(update.getMessage().getChatId()));
-        if (codes.contains(code)){
-            sendMessage.setText("Muvafaqiyatli ro'yhatdan o'tdingiz.");
-        }else{
+        if (codes.contains(code)) {
+            sendMessage.setText("Muvafaqiyatli ro'yhatdan o'tdingiz.\nQo'shimcha imkoniyatlarimiz. /Menu");
+        } else {
             sendMessage.setText("Kod xato kritildi.\nIltimos Tekshirib boshidan kriting.");
         }
-        ResultTelegram o = restTemplate.postForObject(RestConstants.TELEGRAM_BASE_URL + RestConstants.BOT_TOKEN + "/sendMessage", sendMessage, ResultTelegram.class);
+        sendSendMessage(sendMessage);
+    }
+
+    public void enterYourCode(Update update) {
+        String chatId = String.valueOf(update.getCallbackQuery().getMessage().getChatId());
+        SendMessage sendMessage = new SendMessage(chatId, "SMS kodni kriting.");
+        sendSendMessage(sendMessage);
+    }
+
+    public void getAllMenus(Update update) {
+        String chatId = "";
+        if (update.hasCallbackQuery()) {
+            chatId = String.valueOf(update.getCallbackQuery().getMessage().getChatId());
+        } else if (update.hasMessage()) {
+            chatId = String.valueOf(update.getMessage().getChatId());
+        }
+        SendMessage sendMessage = new SendMessage(chatId, "All menu");
+
+        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+        replyKeyboardMarkup.setSelective(true);
+        replyKeyboardMarkup.setResizeKeyboard(true);
+
+        List<KeyboardRow> keyboardRowList = new ArrayList<>();
+
+        KeyboardRow keyboardRow1 = new KeyboardRow();
+        keyboardRow1.add(new KeyboardButton("Trade-In"));
+        keyboardRow1.add(new KeyboardButton("Aksiyalar"));
+
+        KeyboardRow keyboardRow2 = new KeyboardRow();
+        keyboardRow2.add(new KeyboardButton("\uD83D\uDCB5 To'lov"));
+        keyboardRow2.add(new KeyboardButton("\uD83D\uDCB0 Balans"));
+
+        KeyboardRow keyboardRow3 = new KeyboardRow();
+        keyboardRow3.add(new KeyboardButton("\uD83D\uDD00 O'tkazmalar"));
+        keyboardRow3.add(new KeyboardButton("\uD83D\uDDD3 To'lov tarixi"));
+
+        KeyboardRow keyboardRow4 = new KeyboardRow();
+        keyboardRow4.add(new KeyboardButton("↘️ Kiruvchi hisoblar"));
+        keyboardRow4.add(new KeyboardButton("\uD83D\uDD06 Saralangan to'lovlar"));
+
+        KeyboardRow keyboardRow5 = new KeyboardRow();
+        KeyboardButton keyboardButton51 = new KeyboardButton("⚙️ Sozlamalar");
+        keyboardRow5.add(keyboardButton51);
+
+        keyboardRowList.add(keyboardRow1);
+        keyboardRowList.add(keyboardRow2);
+        keyboardRowList.add(keyboardRow3);
+        keyboardRowList.add(keyboardRow4);
+        keyboardRowList.add(keyboardRow5);
+
+        replyKeyboardMarkup.setKeyboard(keyboardRowList);
+        sendMessage.setReplyMarkup(replyKeyboardMarkup);
+        sendSendMessage(sendMessage);
+    }
+
+    public void getDefaultAnswers(Update update) {
+        sendMessage = new SendMessage(String.valueOf(update.getMessage().getChatId()), "Noto'g'ri so'rov.");
+        sendSendMessage(sendMessage);
+    }
+
+    public void shareContactCanceled(Update update) {
+        if (update.getCallbackQuery().getData().equals("cancel")) {
+            String chatId = String.valueOf(update.getCallbackQuery().getMessage().getChatId());
+            sendMessage.setChatId(chatId);
+            sendMessage.setText("Raqam jo'natish bekor qilindi.");
+        }
+    }
+
+    public void getTradeIn(long chatId, String imageCaption, String imagePath) throws FileNotFoundException {
+        SendPhoto sendPhoto = new SendPhoto();
+
+        sendPhoto.setChatId(String.valueOf(chatId));
+        sendPhoto.setPhoto(new InputFile(new File("C:\\Users\\Davron\\IdeaProjects\\Projects-master\\app-webhook-telegrambot\\src\\main\\resources\\static\\images\\book.png")));
+        sendSendPhoto(sendPhoto);
+    }
+
+
+    //Answer to bot
+
+
+    public void getAksiyalar(Update update) {
+        String chatId = String.valueOf(update.getMessage().getChatId());
+        SendMessage sendMessage = new SendMessage(chatId, "Aksiyani tanlang⬇️");
+
+        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+        replyKeyboardMarkup.setSelective(true);
+        replyKeyboardMarkup.setResizeKeyboard(true);
+
+
+        KeyboardRow keyboardRow1 = new KeyboardRow();
+        keyboardRow1.add(new KeyboardButton("Qaynoq avgust narxlarni eritmoqda\uD83D\uDD25"));
+
+        KeyboardRow keyboardRow2 = new KeyboardRow();
+        keyboardRow2.add(new KeyboardButton("5 yilgacha kredit"));
+
+        KeyboardRow keyboardRow3 = new KeyboardRow();
+        keyboardRow3.add(new KeyboardButton("Ko'pchilik orzu qilgan NX4e krossover yangi narxlari"));
+
+        KeyboardRow keyboardRow4 = new KeyboardRow();
+        keyboardRow4.add(new KeyboardButton("Orzungizdagi avtomobil 3 ta to'lovda!"));
+
+        KeyboardRow keyboardRow5 = new KeyboardRow();
+        keyboardRow5.add(new KeyboardButton("Elantra va Sonata 30 oygacha bo'lib to'lash"));
+
+        KeyboardRow keyboardRow6 = new KeyboardRow();
+        keyboardRow6.add(new KeyboardButton("Yangi Elantra bo'lib to'lash, 40% oldindan to'lov"));
+
+        KeyboardRow keyboardRow7 = new KeyboardRow();
+        keyboardRow7.add(new KeyboardButton("SONATA bo‘lib to‘lash, 40% oldindan to'lov"));
+
+        KeyboardRow keyboardRow8 = new KeyboardRow();
+        keyboardRow8.add(new KeyboardButton("Elantra yozi"));
+
+        KeyboardRow keyboardRow9 = new KeyboardRow();
+        keyboardRow9.add(new KeyboardButton("Hozir oling, keyin to'lang!"));
+
+        KeyboardRow keyboardRow10 = new KeyboardRow();
+        keyboardRow10.add(new KeyboardButton("Лизинг"));
+
+        KeyboardRow keyboardRow11 = new KeyboardRow();
+        keyboardRow11.add(new KeyboardButton("\uD83C\uDFE0 Бош меню"));
+
+        List<KeyboardRow> keyboardRowList = new ArrayList<>(List.of(keyboardRow1,
+                keyboardRow2, keyboardRow3, keyboardRow4,
+                keyboardRow5,
+                keyboardRow6,
+                keyboardRow7,
+                keyboardRow8,
+                keyboardRow9, keyboardRow10, keyboardRow11));
+
+        replyKeyboardMarkup.setKeyboard(keyboardRowList);
+        sendMessage.setReplyMarkup(replyKeyboardMarkup);
+        sendSendMessage(sendMessage);
+    }
+
+
+    public void sendSendMessage(SendMessage sendMessage) {
+        restTemplate.postForObject("https://api.telegram.org/bot" + botConfig.getToken() + "/sendMessage", sendMessage, ResultTelegram.class);
+    }
+
+    public void sendSendPhoto(SendPhoto sendPhoto) {
+        restTemplate.postForObject("https://api.telegram.org/bot" + botConfig.getToken() + "/sendPhoto", sendPhoto, ResultTelegram.class);
     }
 }
 

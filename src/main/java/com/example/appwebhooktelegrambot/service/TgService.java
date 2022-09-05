@@ -1,50 +1,84 @@
 package com.example.appwebhooktelegrambot.service;
 
-import com.example.appwebhooktelegrambot.RestConstants;
-import com.example.appwebhooktelegrambot.payload.ResultTelegram;
+import com.example.appwebhooktelegrambot.user.TelegramUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Contact;
-import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.io.FileNotFoundException;
 
 @Service
 @RequiredArgsConstructor
 public class TgService {
     private final WebhookService webhookService;
 
-    public void updateKutish(Update update) {
+    String step = "1";
+
+    public void updateWait(Update update) throws FileNotFoundException {
+
+        TelegramUser telegramUser = webhookService.checkUserWithChatId(update);
+        step = telegramUser.getStep();
 
         if (update.hasMessage()) {
             if (update.getMessage().hasText()) {
                 String text = update.getMessage().getText();
-                if (checkCode(text)){
+                long chatId = update.getMessage().getChatId();
+                if (checkCode(text)) {
                     webhookService.checkUserCode(update);
                 }
                 switch (text) {
                     case "/start":
                         webhookService.whenStart(update);
                         break;
+                    case "/Menu":
+                    case "\uD83C\uDFE0 Бош меню":
+                        webhookService.getAllMenus(update);
+                        break;
+                    case "Trade-In":
+                        webhookService.getTradeIn(chatId, "Hello", "static/images/book.png");
+                        break;
+                    case "Aksiyalar":
+                        webhookService.getAksiyalar(update);
+                        break;
+                    default:
+                        webhookService.getDefaultAnswers(update);
+                        break;
                 }
-            } else if (update.getMessage().hasContact()) {
-                webhookService.checkPhoneNumber(update);
+//            } else if (update.getMessage().hasContact()) {
+//                webhookService.checkPhoneNumber(update);
             }
         }
 
+
+//         Kelgan callBacklarni ushlash uchun.
         if (update.hasCallbackQuery()) {
-            webhookService.whenChooseLanguage(update);
+            String data = update.getCallbackQuery().getData();
+            switch (data) {
+                case "Trade-In":
+
+                    break;
+                case "code":
+                    webhookService.enterYourCode(update);
+                    break;
+                case "reSend":
+                    webhookService.checkSendCodeResend(update);
+                    break;
+                case "cancel":
+                    webhookService.shareContactCanceled(update);
+                    break;
+                // Aslida step berilsa yetadi shu yerda.
+                case "uzb":
+                case "ru":
+                case "en":
+                    webhookService.whenChooseLanguage(update);
+                    webhookService.getAllMenus(update);
+                    break;
+            }
         }
     }
-    public boolean checkCode(String text){
-        if (text.length()!=6) return false;
+
+    public boolean checkCode(String text) {  // bazada tekshiriladi. Bu hozircha example
+        if (text.length() != 6) return false;
         for (char c : text.toCharArray()) {
             if (Character.isAlphabetic(c)) return false;
         }

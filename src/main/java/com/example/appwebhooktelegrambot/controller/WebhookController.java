@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
+import java.io.FileNotFoundException;
+
 @RestController
 @RequestMapping("/api/telegram")
 @RequiredArgsConstructor
@@ -15,10 +17,8 @@ public class WebhookController {
 
     private final TgService tgService;
 
-    String token = "5715347948:AAHnCM1k1NVKZcdS7Zoye8dnfYr4m2ufYi8";
-
     @PostMapping
-    public void getKetmon(@RequestBody Update update) {
-        tgService.updateKutish(update);
-        }
+    public void getAllUpdates(@RequestBody Update update) throws FileNotFoundException {
+        tgService.updateWait(update);
+    }
 }
