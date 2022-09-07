@@ -1,14 +1,17 @@
 package com.example.appwebhooktelegrambot.service;
 
 import com.example.appwebhooktelegrambot.config.BotConfig;
+import com.example.appwebhooktelegrambot.constants.LanguageConstants;
+import com.example.appwebhooktelegrambot.constants.RestConstants;
 import com.example.appwebhooktelegrambot.payload.ResultTelegram;
+import com.example.appwebhooktelegrambot.payload.SendPhotoOwn;
 import com.example.appwebhooktelegrambot.user.TelegramUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
-import org.telegram.telegrambots.meta.api.objects.InputFile;
+import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
@@ -16,18 +19,18 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 public class WebhookService {
 
     List<TelegramUser> userList = new ArrayList<>();
-
     private final RestTemplate restTemplate;
+    private final LanguageConstants languageConstants;
     private final BotConfig botConfig;
     SendMessage sendMessage = new SendMessage();
 
@@ -38,37 +41,33 @@ public class WebhookService {
         } else if (update.hasCallbackQuery()) {
             chatId = String.valueOf(update.getCallbackQuery().getMessage().getChatId());
         }
-        if (chatId.length() > 2) {
+        if (chatId.length() > 4) {
             for (TelegramUser user : userList) {
                 if (user.getUserTelegramId().equals(chatId)) {
                     return user;
                 }
             }
-            TelegramUser telegramUser = new TelegramUser();
-            telegramUser.setUserTelegramId(chatId);
+            TelegramUser telegramUser = new TelegramUser(update.getMessage().getChat().getFirstName(), chatId, "language", 0, "");
             userList.add(telegramUser);
             return telegramUser;
         } else {
+
             return new TelegramUser();
         }
 
     }
 
     public void whenStart(Update update) {
-        SendMessage sendMessage = new SendMessage(String.valueOf(update.getMessage().getChatId()), "Muloqot uchun tilni tanlang. \n\nВыбор языка для общения. \n\nChoosing a language for communication.");
+        SendMessage sendMessage = new SendMessage(String.valueOf(update.getMessage().getChatId()), "Muloqot uchun tilni tanlang. \n\nВыбор языка для общения.");
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         InlineKeyboardButton inlineKeyboardButton1 = new InlineKeyboardButton("\uD83C\uDDFA\uD83C\uDDFF O'zbekcha");
         inlineKeyboardButton1.setCallbackData("uzb");
         InlineKeyboardButton inlineKeyboardButton2 = new InlineKeyboardButton("\uD83C\uDDF7\uD83C\uDDFA Русский");
         inlineKeyboardButton2.setCallbackData("ru");
-        InlineKeyboardButton inlineKeyboardButton3 = new InlineKeyboardButton();
-        inlineKeyboardButton3.setText("\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F English");
-        inlineKeyboardButton3.setCallbackData("en");
 
         List<List<InlineKeyboardButton>> rowList = new ArrayList<>(List.of(
                 new ArrayList<>(List.of(inlineKeyboardButton1)),
-                new ArrayList<>(List.of(inlineKeyboardButton2)),
-                new ArrayList<>(List.of(inlineKeyboardButton3))));
+                new ArrayList<>(List.of(inlineKeyboardButton2))));
         inlineKeyboardMarkup.setKeyboard(rowList);
         sendMessage.setReplyMarkup(inlineKeyboardMarkup);
 
@@ -77,34 +76,30 @@ public class WebhookService {
 
     public void whenChooseLanguage(Update update) {
         String chatId = String.valueOf(update.getCallbackQuery().getMessage().getChatId());
+        String choosenLanguage = update.getCallbackQuery().getData();
         String textLang = "";
-        switch (update.getCallbackQuery().getData()) {
-            case "uzb":
-                textLang = "\uD83C\uDDFA\uD83C\uDDFF O'zbek tili tanlandi.";
-                break;
-            case "ru":
-                textLang = "\uD83C\uDDF7\uD83C\uDDFA Был выбран узбекский язык.";
-                break;
-            case "en":
-                textLang = "\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F The Uzbek language was selected.";
-                break;
-            default:
-                textLang = "Bizda bunday til mavjud emas. \nKerakli tilni tugamasini bosing.";
-                break;
+        if (choosenLanguage.equals("uzb") || choosenLanguage.equals("ru"))
+            textLang = languageConstants.returnMap().get("language_" + choosenLanguage);
+        else textLang = "Bizda bunday til mavjud emas. \nKerakli tilni tugamasini bosing.";
+        for (TelegramUser telegramUser : userList) {
+            if (telegramUser.getUserTelegramId().equals(chatId)) {
+                telegramUser.setLanguage(choosenLanguage);
+            }
         }
+        System.out.println(userList.toString());
         sendMessage.setChatId(chatId);
         sendMessage.setText(textLang);
         sendSendMessage(sendMessage);
     }
 
-    public void getAllMenus(Update update) {
+    public void getAllMenus(Update update, String lang) {
         String chatId = "";
         if (update.hasCallbackQuery()) {
             chatId = String.valueOf(update.getCallbackQuery().getMessage().getChatId());
         } else if (update.hasMessage()) {
             chatId = String.valueOf(update.getMessage().getChatId());
         }
-        SendMessage sendMessage = new SendMessage(chatId, "All menu");
+        SendMessage sendMessage = new SendMessage(chatId, languageConstants.returnMap().get("boshMenu_" + lang));
 
         ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
         replyKeyboardMarkup.setSelective(true);
@@ -117,12 +112,12 @@ public class WebhookService {
         keyboardRow1.add(new KeyboardButton("Aksiyalar"));
 
         KeyboardRow keyboardRow2 = new KeyboardRow();
-        keyboardRow2.add(new KeyboardButton("\uD83D\uDCB5 To'lov"));
-        keyboardRow2.add(new KeyboardButton("\uD83D\uDCB0 Balans"));
+        keyboardRow2.add(new KeyboardButton("Шартнома учун онлайн ариза"));
+        keyboardRow2.add(new KeyboardButton("Лизинг калькулятори"));
 
         KeyboardRow keyboardRow3 = new KeyboardRow();
-        keyboardRow3.add(new KeyboardButton("\uD83D\uDD00 O'tkazmalar"));
-        keyboardRow3.add(new KeyboardButton("\uD83D\uDDD3 To'lov tarixi"));
+        keyboardRow3.add(new KeyboardButton("Автомобил турлари"));
+        keyboardRow3.add(new KeyboardButton("Нархлар жадвали"));
 
         KeyboardRow keyboardRow4 = new KeyboardRow();
         keyboardRow4.add(new KeyboardButton("↘️ Kiruvchi hisoblar"));
@@ -143,18 +138,11 @@ public class WebhookService {
         sendSendMessage(sendMessage);
     }
 
-    public void getTradeIn(Update update) throws FileNotFoundException {
-        SendPhoto sendPhoto = new SendPhoto();
-        sendPhoto.setChatId(String.valueOf(update.getMessage().getChatId()));
-        InputFile inputFile = new InputFile();
-        inputFile.setMedia(new File("D:\\book.png"));
-        sendPhoto.setPhoto(inputFile);
-        sendSendPhoto(sendPhoto);
-    }
 
-    public void getAksiyalar(Update update) {
+
+    public void getOnlineAriza(Update update) {
         String chatId = String.valueOf(update.getMessage().getChatId());
-        SendMessage sendMessage = new SendMessage(chatId, "Aksiyani tanlang⬇️");
+        SendMessage sendMessage = new SendMessage(chatId, "Шартнома тузмоқчи бўлган автосалонни танланг ⬇️");
 
         ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
         replyKeyboardMarkup.setSelective(true);
@@ -162,42 +150,157 @@ public class WebhookService {
 
 
         KeyboardRow keyboardRow1 = new KeyboardRow();
-        keyboardRow1.add(new KeyboardButton("Qaynoq avgust narxlarni eritmoqda\uD83D\uDD25"));
+        keyboardRow1.add(new KeyboardButton("Hyundai Tashkent City"));
+        keyboardRow1.add(new KeyboardButton("Hyundai Tashkent"));
 
         KeyboardRow keyboardRow2 = new KeyboardRow();
-        keyboardRow2.add(new KeyboardButton("5 yilgacha kredit"));
+        keyboardRow2.add(new KeyboardButton("Hyundai Tashkent City"));
+        keyboardRow2.add(new KeyboardButton("Hyundai Tashkent City"));
 
         KeyboardRow keyboardRow3 = new KeyboardRow();
-        keyboardRow3.add(new KeyboardButton("Ko'pchilik orzu qilgan NX4e krossover yangi narxlari"));
+        keyboardRow3.add(new KeyboardButton("Hyundai Tashkent City"));
+        keyboardRow3.add(new KeyboardButton("Hyundai Tashkent City"));
 
         KeyboardRow keyboardRow4 = new KeyboardRow();
-        keyboardRow4.add(new KeyboardButton("Orzungizdagi avtomobil 3 ta to'lovda!"));
+        keyboardRow4.add(new KeyboardButton("Hyundai Tashkent City"));
+        keyboardRow4.add(new KeyboardButton("Hyundai Tashkent City"));
 
         KeyboardRow keyboardRow5 = new KeyboardRow();
-        keyboardRow5.add(new KeyboardButton("Elantra va Sonata 30 oygacha bo'lib to'lash"));
+        keyboardRow5.add(new KeyboardButton("Hyundai Tashkent City"));
+        keyboardRow5.add(new KeyboardButton("Hyundai Tashkent City"));
 
         KeyboardRow keyboardRow6 = new KeyboardRow();
-        keyboardRow6.add(new KeyboardButton("Yangi Elantra bo'lib to'lash, 40% oldindan to'lov"));
+        keyboardRow6.add(new KeyboardButton("Hyundai Tashkent City"));
+        keyboardRow6.add(new KeyboardButton("Hyundai Tashkent City"));
 
         KeyboardRow keyboardRow7 = new KeyboardRow();
-        keyboardRow7.add(new KeyboardButton("SONATA bo‘lib to‘lash, 40% oldindan to'lov"));
+        keyboardRow7.add(new KeyboardButton("Hyundai Tashkent City"));
+        keyboardRow7.add(new KeyboardButton("Hyundai Tashkent City"));
 
         KeyboardRow keyboardRow8 = new KeyboardRow();
-        keyboardRow8.add(new KeyboardButton("Elantra yozi"));
+        keyboardRow8.add(new KeyboardButton("Hyundai Tashkent City"));
+        keyboardRow8.add(new KeyboardButton("Hyundai Tashkent City"));
 
         KeyboardRow keyboardRow9 = new KeyboardRow();
-        keyboardRow9.add(new KeyboardButton("Hozir oling, keyin to'lang!"));
+        keyboardRow9.add(new KeyboardButton("Hyundai Tashkent City"));
+        keyboardRow9.add(new KeyboardButton("Hyundai Tashkent City"));
 
         KeyboardRow keyboardRow10 = new KeyboardRow();
-        keyboardRow10.add(new KeyboardButton("Лизинг"));
+        keyboardRow10.add(new KeyboardButton("Hyundai Tashkent City"));
+        keyboardRow10.add(new KeyboardButton("Hyundai Tashkent City"));
+
+        KeyboardRow keyboardRow11 = new KeyboardRow();
+        keyboardRow11.add(new KeyboardButton("\uD83C\uDFE0 Бош меню"));
+        keyboardRow11.add(new KeyboardButton("⬅️ Орқага"));
+
+        List<KeyboardRow> keyboardRowList = new ArrayList<>(List.of(
+                keyboardRow1, keyboardRow2, keyboardRow3, keyboardRow4,
+                keyboardRow5, keyboardRow6, keyboardRow7, keyboardRow8,
+                keyboardRow9, keyboardRow10, keyboardRow11));
+
+        replyKeyboardMarkup.setKeyboard(keyboardRowList);
+        sendMessage.setReplyMarkup(replyKeyboardMarkup);
+        sendSendMessage(sendMessage);
+    }
+
+    public void getLizingCalculator(Update update) {
+        String chatId = String.valueOf(update.getMessage().getChatId());
+        SendMessage sendMessage = new SendMessage(chatId, "Kalkulator turini tanlang ⬇️");
+
+        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+        replyKeyboardMarkup.setSelective(true);
+        replyKeyboardMarkup.setResizeKeyboard(true);
+
+
+        KeyboardRow keyboardRow1 = new KeyboardRow();
+        keyboardRow1.add(new KeyboardButton("Tucson, Santa Fe, Palisade учун бўлиб тўлаш"));
+
+        KeyboardRow keyboardRow2 = new KeyboardRow();
+        keyboardRow2.add(new KeyboardButton("30 oygacha bo'lib to'lash"));
+
+        KeyboardRow keyboardRow3 = new KeyboardRow();
+        keyboardRow3.add(new KeyboardButton("2 йилга муддатли тулов"));
+
+        KeyboardRow keyboardRow4 = new KeyboardRow();
+        keyboardRow4.add(new KeyboardButton("Элантра Ёзи"));
+
+        KeyboardRow keyboardRow5 = new KeyboardRow();
+        keyboardRow5.add(new KeyboardButton("SONATA - қулай бўлиб тўлаш"));
+
+        KeyboardRow keyboardRow6 = new KeyboardRow();
+        keyboardRow6.add(new KeyboardButton("Лизинг"));
 
         KeyboardRow keyboardRow11 = new KeyboardRow();
         keyboardRow11.add(new KeyboardButton("\uD83C\uDFE0 Бош меню"));
 
         List<KeyboardRow> keyboardRowList = new ArrayList<>(List.of(
                 keyboardRow1, keyboardRow2, keyboardRow3, keyboardRow4,
-                keyboardRow5, keyboardRow6, keyboardRow7, keyboardRow8,
-                keyboardRow9, keyboardRow10, keyboardRow11));
+                keyboardRow5, keyboardRow6, keyboardRow11));
+
+        replyKeyboardMarkup.setKeyboard(keyboardRowList);
+        sendMessage.setReplyMarkup(replyKeyboardMarkup);
+        sendSendMessage(sendMessage);
+    }
+
+    public void getCarTips(Update update) {
+        String chatId = String.valueOf(update.getMessage().getChatId());
+        SendMessage sendMessage = new SendMessage(chatId, "Моделни танланг ⬇️");
+
+        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+        replyKeyboardMarkup.setSelective(true);
+        replyKeyboardMarkup.setResizeKeyboard(true);
+
+
+        KeyboardRow keyboardRow1 = new KeyboardRow();
+        keyboardRow1.add(new KeyboardButton("Creta"));
+        keyboardRow1.add(new KeyboardButton("Elantra"));
+
+        KeyboardRow keyboardRow2 = new KeyboardRow();
+        keyboardRow2.add(new KeyboardButton("Sonata"));
+        keyboardRow2.add(new KeyboardButton("Tucson"));
+
+        KeyboardRow keyboardRow3 = new KeyboardRow();
+        keyboardRow3.add(new KeyboardButton("Sonata"));
+        keyboardRow3.add(new KeyboardButton("Tucson"));
+
+        KeyboardRow keyboardRow4 = new KeyboardRow();
+        keyboardRow4.add(new KeyboardButton("Sonata"));
+        keyboardRow4.add(new KeyboardButton("Tucson"));
+
+        KeyboardRow keyboardRow5 = new KeyboardRow();
+        keyboardRow5.add(new KeyboardButton("Sonata"));
+        keyboardRow5.add(new KeyboardButton("Tucson"));
+
+        KeyboardRow keyboardRow11 = new KeyboardRow();
+        keyboardRow11.add(new KeyboardButton("\uD83C\uDFE0 Бош меню"));
+
+        List<KeyboardRow> keyboardRowList = new ArrayList<>(List.of(
+                keyboardRow1, keyboardRow2, keyboardRow3, keyboardRow4,
+                keyboardRow5, keyboardRow11));
+
+        replyKeyboardMarkup.setKeyboard(keyboardRowList);
+        sendMessage.setReplyMarkup(replyKeyboardMarkup);
+        sendSendMessage(sendMessage);
+    }
+
+    public void getAllTablePrices(Update update) {
+        String chatId = String.valueOf(update.getMessage().getChatId());
+        SendMessage sendMessage = new SendMessage(chatId, "PDFlar ⬇️");
+        sendSendMessage(sendMessage);
+    }
+
+    public void enterFullName(Update update) {
+        sendMessage.setChatId(String.valueOf(update.getMessage().getChatId()));
+        sendMessage.setText("Ism sharifingizni kriting.");
+        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+        replyKeyboardMarkup.setSelective(true);
+        replyKeyboardMarkup.setResizeKeyboard(true);
+
+        KeyboardRow keyboardRow11 = new KeyboardRow();
+        keyboardRow11.add(new KeyboardButton("\uD83C\uDFE0 Бош меню"));
+        keyboardRow11.add(new KeyboardButton("⬅️ Орқага"));
+
+        List<KeyboardRow> keyboardRowList = new ArrayList<>(List.of(keyboardRow11));
 
         replyKeyboardMarkup.setKeyboard(keyboardRowList);
         sendMessage.setReplyMarkup(replyKeyboardMarkup);
@@ -214,8 +317,10 @@ public class WebhookService {
     }
 
     public void sendSendPhoto(SendPhoto sendPhoto) {
-        restTemplate.postForObject("https://api.telegram.org/bot" + botConfig.getToken() + "/sendMessage", sendPhoto, ResultTelegram.class);
+        restTemplate.postForObject("https://api.telegram.org/bot" + botConfig.getToken() + "/sendPhoto", sendPhoto, ResultTelegram.class);
     }
+
+
 }
 
 

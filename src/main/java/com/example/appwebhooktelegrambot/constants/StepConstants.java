@@ -6,4 +6,5 @@ public interface StepConstants {
     String START = "1";
     String LANGUAGE = "2";
     String ALL_MENU = "3";
+    String SHARTNOMA_ARIZA = "ARIZA";
 }

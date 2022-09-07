@@ -8,15 +8,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class TelegramUser {
+    String userName;
     String userTelegramId;
-    String step = "1";
-    Integer paginationIndex = 0;
-
-    public TelegramUser(String userTelegramId) {
-        this.userTelegramId = userTelegramId;
-    }
-
-    public TelegramUser(Integer paginationIndex) {
-        this.paginationIndex = paginationIndex;
-    }
+    String step;
+    Integer paginationIndex;
+    String language;
 }

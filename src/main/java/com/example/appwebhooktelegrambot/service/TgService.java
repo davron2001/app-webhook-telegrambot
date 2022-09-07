@@ -1,5 +1,6 @@
 package com.example.appwebhooktelegrambot.service;
 
+import com.example.appwebhooktelegrambot.constants.StepConstants;
 import com.example.appwebhooktelegrambot.user.TelegramUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -11,34 +12,64 @@ import java.io.FileNotFoundException;
 @RequiredArgsConstructor
 public class TgService {
     private final WebhookService webhookService;
+    private final Trade_InService trade_inService;
+    private final AksiyalarService aksiyalarService;
 
     String step = "1";
 
     public void updateWait(Update update) throws FileNotFoundException {
 
         TelegramUser telegramUser = webhookService.checkUserWithChatId(update);
-        step = telegramUser.getStep();
+        System.out.println(telegramUser);
 
         if (update.hasMessage()) {
             if (update.getMessage().hasText()) {
                 String text = update.getMessage().getText();
                 String chatId = String.valueOf(update.getMessage().getChatId());
+                switch (step) {
+                    case "ARIZA":
+                        webhookService.enterFullName(update);
+                        break;
+                }
                 switch (text) {
                     case "/start":
                         webhookService.whenStart(update);
                         break;
                     case "/Menu":
                     case "\uD83C\uDFE0 Бош меню":
-                        webhookService.getAllMenus(update);
+                        webhookService.getAllMenus(update, telegramUser.getLanguage());
                         break;
                     case "Trade-In":
-                        webhookService.getTradeIn(update);
+                        trade_inService.getTradeIn(update);
                         break;
                     case "Aksiyalar":
-                        webhookService.getAksiyalar(update);
+                        aksiyalarService.getAksiyalar(update);
                         break;
+                    case "Qaynoq avgust narxlarni eritmoqda\uD83D\uDD25":
+                        aksiyalarService.getHotAugust(update);
+                        break;
+                    case "Шартнома учун онлайн ариза":
+                        webhookService.getOnlineAriza(update);
+                        step = StepConstants.SHARTNOMA_ARIZA;
+                        break;
+                    case "Лизинг калькулятори":
+                        webhookService.getLizingCalculator(update);
+                        break;
+                    case "Автомобил турлари":
+                        webhookService.getCarTips(update);
+                        break;
+                    case "Нархлар жадвали":
+                        webhookService.getAllTablePrices(update);
+                        break;
+
+                    case "\uD83C\uDF10 Тилни танлаш":
+                        webhookService.getCarTips(update);
+                        break;
+
                     default:
-                        webhookService.getDefaultAnswers(update);
+                        if (step.equals("1")) {
+                            webhookService.getDefaultAnswers(update);
+                        }
                         break;
                 }
             }
@@ -57,7 +88,7 @@ public class TgService {
                 case "ru":
                 case "en":
                     webhookService.whenChooseLanguage(update);
-                    webhookService.getAllMenus(update);
+                    webhookService.getAllMenus(update, telegramUser.getLanguage());
                     break;
             }
         }
