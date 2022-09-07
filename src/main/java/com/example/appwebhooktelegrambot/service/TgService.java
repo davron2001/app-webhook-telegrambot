@@ -14,6 +14,10 @@ public class TgService {
     private final WebhookService webhookService;
     private final Trade_InService trade_inService;
     private final AksiyalarService aksiyalarService;
+    private final AllTablePriceService allTablePriceService;
+    private final CarTipsService carTipsService;
+    private final LizingCalculatorService lizingCalculatorService;
+    private final OnlineApplicationService onlineApplicationService;
 
     String step = "1";
 
@@ -49,21 +53,21 @@ public class TgService {
                         aksiyalarService.getHotAugust(update);
                         break;
                     case "Шартнома учун онлайн ариза":
-                        webhookService.getOnlineAriza(update);
+                        onlineApplicationService.getOnlineApplication(update);
                         step = StepConstants.SHARTNOMA_ARIZA;
                         break;
                     case "Лизинг калькулятори":
-                        webhookService.getLizingCalculator(update);
+                        lizingCalculatorService.getLizingCalculator(update);
                         break;
                     case "Автомобил турлари":
-                        webhookService.getCarTips(update);
+                        carTipsService.getCarTips(update);
                         break;
                     case "Нархлар жадвали":
-                        webhookService.getAllTablePrices(update);
+                        allTablePriceService.getAllTablePrices(update);
                         break;
 
                     case "\uD83C\uDF10 Тилни танлаш":
-                        webhookService.getCarTips(update);
+                        carTipsService.getCarTips(update);
                         break;
 
                     default:

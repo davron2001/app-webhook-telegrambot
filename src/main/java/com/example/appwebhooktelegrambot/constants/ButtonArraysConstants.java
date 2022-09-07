@@ -3,12 +3,9 @@ package com.example.appwebhooktelegrambot.constants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.Map;
-
 @Service
 @RequiredArgsConstructor
-public class ButtonArrays {
+public class ButtonArraysConstants {
     public String[] getAksiyalarArray() {
         return new String[]{
                 "Qaynoq avgust narxlarni eritmoqda\uD83D\uDD25",

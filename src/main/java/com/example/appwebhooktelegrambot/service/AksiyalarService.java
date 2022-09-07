@@ -1,7 +1,7 @@
 package com.example.appwebhooktelegrambot.service;
 
 import com.example.appwebhooktelegrambot.config.BotConfig;
-import com.example.appwebhooktelegrambot.constants.ButtonArrays;
+import com.example.appwebhooktelegrambot.constants.ButtonArraysConstants;
 import com.example.appwebhooktelegrambot.constants.RestConstants;
 import com.example.appwebhooktelegrambot.payload.ResultTelegram;
 import com.example.appwebhooktelegrambot.payload.SendPhotoOwn;
@@ -26,7 +26,7 @@ public class AksiyalarService {
 
     private final RestTemplate restTemplate;
     private final BotConfig botConfig;
-    private final ButtonArrays buttonArrays;
+    private final ButtonArraysConstants buttonArrays;
     SendMessage sendMessage = new SendMessage();
     String fileName = "";
     String fileId = null;
