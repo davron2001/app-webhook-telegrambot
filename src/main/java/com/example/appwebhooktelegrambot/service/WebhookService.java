@@ -47,7 +47,7 @@ public class WebhookService {
                     return user;
                 }
             }
-            TelegramUser telegramUser = new TelegramUser(update.getMessage().getChat().getFirstName(), chatId, "language", 0, "");
+            TelegramUser telegramUser = new TelegramUser(update.getMessage().getChat().getFirstName(), chatId, null, 0, "");
             userList.add(telegramUser);
             return telegramUser;
         } else {
@@ -99,6 +99,7 @@ public class WebhookService {
         } else if (update.hasMessage()) {
             chatId = String.valueOf(update.getMessage().getChatId());
         }
+        sendMessage.setChatId(chatId);
         SendMessage sendMessage = new SendMessage(chatId, languageConstants.returnMap().get("boshMenu_" + lang));
 
         ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
@@ -120,11 +121,11 @@ public class WebhookService {
         keyboardRow3.add(new KeyboardButton("Нархлар жадвали"));
 
         KeyboardRow keyboardRow4 = new KeyboardRow();
-        keyboardRow4.add(new KeyboardButton("↘️ Kiruvchi hisoblar"));
-        keyboardRow4.add(new KeyboardButton("\uD83D\uDD06 Saralangan to'lovlar"));
+        keyboardRow4.add(new KeyboardButton("Kiruvchi hisoblar"));
+        keyboardRow4.add(new KeyboardButton("Saralangan to'lovlar"));
 
         KeyboardRow keyboardRow5 = new KeyboardRow();
-        KeyboardButton keyboardButton51 = new KeyboardButton("⚙️ Sozlamalar");
+        KeyboardButton keyboardButton51 = new KeyboardButton("\uD83C\uDF10 Тилни танлаш");
         keyboardRow5.add(keyboardButton51);
 
         keyboardRowList.add(keyboardRow1);
@@ -137,7 +138,6 @@ public class WebhookService {
         sendMessage.setReplyMarkup(replyKeyboardMarkup);
         sendSendMessage(sendMessage);
     }
-
 
     public void enterFullName(Update update) {
         sendMessage.setChatId(String.valueOf(update.getMessage().getChatId()));
@@ -160,6 +160,10 @@ public class WebhookService {
     public void getDefaultAnswers(Update update) {
         sendMessage = new SendMessage(String.valueOf(update.getMessage().getChatId()), "Noto'g'ri so'rov.");
         sendSendMessage(sendMessage);
+    }
+
+    public void changeLanguageService(Update update, TelegramUser telegramUser){
+        telegramUser.setLanguage(update.getCallbackQuery().getData());
     }
 
     public void sendSendMessage(SendMessage sendMessage) {

@@ -30,31 +30,76 @@ public class TgService {
             if (update.getMessage().hasText()) {
                 String text = update.getMessage().getText();
                 String chatId = String.valueOf(update.getMessage().getChatId());
-                switch (step) {
-                    case "ARIZA":
-                        webhookService.enterFullName(update);
-                        break;
+                int userCurrentStep = telegramUser.getStep() == null ? 1 : telegramUser.getStep();
+                if (userCurrentStep > 100) {
+                    switch (userCurrentStep) {
+                        case 101:
+                            switch (text) {
+                                case "Qaynoq avgust narxlarni eritmoqda\uD83D\uDD25":
+                                    aksiyalarService.getHotAugust(update);
+                                    break;
+                                case "5 yilgacha kredit":
+                                    aksiyalarService.getFiveYearsCredit(update);
+                                    break;
+                                case "Ko'pchilik orzu qilgan NX4e krossover yangi narxlari":
+                                    aksiyalarService.getNewPriceNX4e(update);
+                                    break;
+                                case "Orzungizdagi avtomobil 3 ta to'lovda!":
+                                    aksiyalarService.getDreamCarThreeYear(update);
+                                    break;
+                                case "Elantra va Sonata 30 oygacha bo'lib to'lash":
+                                    aksiyalarService.getCarsThirtyMonths(update);
+                                    break;
+                                case "Yangi Elantra bo'lib to'lash, 40% oldindan to'lov":
+                                    aksiyalarService.getCarPayBeforeFortyPercent(update);
+                                    break;
+                                case "SONATA bo‘lib to‘lash, 40% oldindan to'lov":
+                                    aksiyalarService.getPayInSonataInstallments(update);
+                                    break;
+                                case "Elantra yozi":
+                                    aksiyalarService.getElantiraSummer(update);
+                                    aksiyalarService.getElantiraSummerInlineButton(chatId);
+                                    telegramUser.setStep(StepConstants.STEP_ALL_TIMES);
+                                    break;
+                                case "⬅️ Орқага":
+                                    webhookService.getAllMenus(update, telegramUser.getLanguage());
+                                    telegramUser.setStep(null);
+                                    break;
+                            }
+                            break;
+                        case 102:
+                            switch (text) {
+                                case "⬅️ Орқага":
+                                    aksiyalarService.getAksiyalar(update);
+                                    telegramUser.setStep(StepConstants.STEP_PROMOTION);
+                                    break;
+                            }
+                            break;
+                    }
+                } else if (userCurrentStep > 200) {
+
+                } else {
+
                 }
                 switch (text) {
                     case "/start":
+                    case "\uD83C\uDF10 Тилни танлаш":
                         webhookService.whenStart(update);
                         break;
                     case "/Menu":
                     case "\uD83C\uDFE0 Бош меню":
                         webhookService.getAllMenus(update, telegramUser.getLanguage());
+                        telegramUser.setStep(null);
                         break;
                     case "Trade-In":
                         trade_inService.getTradeIn(update);
                         break;
                     case "Aksiyalar":
                         aksiyalarService.getAksiyalar(update);
-                        break;
-                    case "Qaynoq avgust narxlarni eritmoqda\uD83D\uDD25":
-                        aksiyalarService.getHotAugust(update);
+                        telegramUser.setStep(StepConstants.STEP_PROMOTION);
                         break;
                     case "Шартнома учун онлайн ариза":
                         onlineApplicationService.getOnlineApplication(update);
-                        step = StepConstants.SHARTNOMA_ARIZA;
                         break;
                     case "Лизинг калькулятори":
                         lizingCalculatorService.getLizingCalculator(update);
@@ -66,13 +111,9 @@ public class TgService {
                         allTablePriceService.getAllTablePrices(update);
                         break;
 
-                    case "\uD83C\uDF10 Тилни танлаш":
-                        carTipsService.getCarTips(update);
-                        break;
-
                     default:
                         if (step.equals("1")) {
-                            webhookService.getDefaultAnswers(update);
+//                            webhookService.getDefaultAnswers(update);
                         }
                         break;
                 }
@@ -93,6 +134,9 @@ public class TgService {
                 case "en":
                     webhookService.whenChooseLanguage(update);
                     webhookService.getAllMenus(update, telegramUser.getLanguage());
+                    break;
+                case "\uD83C\uDF10 Тилни танлаш":
+                    webhookService.changeLanguageService(update, telegramUser);
                     break;
             }
         }

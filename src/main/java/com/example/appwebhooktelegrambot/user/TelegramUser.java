@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 public class TelegramUser {
     String userName;
     String userTelegramId;
-    String step;
+    Integer step;
     Integer paginationIndex;
     String language;
 }
