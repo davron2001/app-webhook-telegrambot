@@ -10,7 +10,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class LanguageConstants {
     public Map<String, String> returnMap() {
-        Map<String, String> map = new HashMap<>();
+        HashMap<String, String> map = new HashMap<>();
         map.put("boshMenu_uzb", "Hyundai Auto Asia botiga hush kelibsiz!\n\nHamma menyular");
         map.put("boshMenu_ru", "Добро пожаловать в бот Hyundai Auto!\nГлавное меню");
         map.put("language_uzb", "\uD83C\uDDFA\uD83C\uDDFF O'zbek tili tanlandi.");

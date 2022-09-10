@@ -1,8 +1,10 @@
 package com.example.appwebhooktelegrambot.service;
 
 import com.example.appwebhooktelegrambot.config.BotConfig;
+import com.example.appwebhooktelegrambot.constants.ButtonArraysConstants;
 import com.example.appwebhooktelegrambot.constants.LanguageConstants;
 import com.example.appwebhooktelegrambot.constants.RestConstants;
+import com.example.appwebhooktelegrambot.payload.CreateReplyButtonsOwn;
 import com.example.appwebhooktelegrambot.payload.ResultTelegram;
 import com.example.appwebhooktelegrambot.payload.SendPhotoOwn;
 import com.example.appwebhooktelegrambot.user.TelegramUser;
@@ -32,6 +34,9 @@ public class WebhookService {
     private final RestTemplate restTemplate;
     private final LanguageConstants languageConstants;
     private final BotConfig botConfig;
+
+    private final CreateReplyButtonsOwn createReplyButtonsOwn;
+    private final ButtonArraysConstants buttonArraysConstants;
     SendMessage sendMessage = new SendMessage();
 
     public TelegramUser checkUserWithChatId(Update update) {
@@ -47,7 +52,7 @@ public class WebhookService {
                     return user;
                 }
             }
-            TelegramUser telegramUser = new TelegramUser(update.getMessage().getChat().getFirstName(), chatId, null, 0, "");
+            TelegramUser telegramUser = new TelegramUser(update.getMessage().getChat().getFirstName(), chatId, 1, 0, "uzb");
             userList.add(telegramUser);
             return telegramUser;
         } else {
@@ -80,7 +85,8 @@ public class WebhookService {
         String textLang = "";
         if (choosenLanguage.equals("uzb") || choosenLanguage.equals("ru"))
             textLang = languageConstants.returnMap().get("language_" + choosenLanguage);
-        else textLang = "Bizda bunday til mavjud emas. \nKerakli tilni tugamasini bosing.";
+        else
+            textLang = "Bizda bunday til mavjud emas.\nKerakli tilni tugamasini bosing.\n\nУ нас нет такого языка.\nНажмите кнопку нужного языка.";
         for (TelegramUser telegramUser : userList) {
             if (telegramUser.getUserTelegramId().equals(chatId)) {
                 telegramUser.setLanguage(choosenLanguage);
@@ -99,70 +105,22 @@ public class WebhookService {
         } else if (update.hasMessage()) {
             chatId = String.valueOf(update.getMessage().getChatId());
         }
+
         sendMessage.setChatId(chatId);
         SendMessage sendMessage = new SendMessage(chatId, languageConstants.returnMap().get("boshMenu_" + lang));
 
-        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
-        replyKeyboardMarkup.setSelective(true);
-        replyKeyboardMarkup.setResizeKeyboard(true);
+        ReplyKeyboardMarkup replyKeyboardMarkup = createReplyButtonsOwn.createReplyButtons2x2(buttonArraysConstants.getAllMenuButtons());
 
-        List<KeyboardRow> keyboardRowList = new ArrayList<>();
-
-        KeyboardRow keyboardRow1 = new KeyboardRow();
-        keyboardRow1.add(new KeyboardButton("Trade-In"));
-        keyboardRow1.add(new KeyboardButton("Aksiyalar"));
-
-        KeyboardRow keyboardRow2 = new KeyboardRow();
-        keyboardRow2.add(new KeyboardButton("Шартнома учун онлайн ариза"));
-        keyboardRow2.add(new KeyboardButton("Лизинг калькулятори"));
-
-        KeyboardRow keyboardRow3 = new KeyboardRow();
-        keyboardRow3.add(new KeyboardButton("Автомобил турлари"));
-        keyboardRow3.add(new KeyboardButton("Нархлар жадвали"));
-
-        KeyboardRow keyboardRow4 = new KeyboardRow();
-        keyboardRow4.add(new KeyboardButton("Kiruvchi hisoblar"));
-        keyboardRow4.add(new KeyboardButton("Saralangan to'lovlar"));
-
-        KeyboardRow keyboardRow5 = new KeyboardRow();
-        KeyboardButton keyboardButton51 = new KeyboardButton("\uD83C\uDF10 Тилни танлаш");
-        keyboardRow5.add(keyboardButton51);
-
-        keyboardRowList.add(keyboardRow1);
-        keyboardRowList.add(keyboardRow2);
-        keyboardRowList.add(keyboardRow3);
-        keyboardRowList.add(keyboardRow4);
-        keyboardRowList.add(keyboardRow5);
-
-        replyKeyboardMarkup.setKeyboard(keyboardRowList);
-        sendMessage.setReplyMarkup(replyKeyboardMarkup);
-        sendSendMessage(sendMessage);
-    }
-
-    public void enterFullName(Update update) {
-        sendMessage.setChatId(String.valueOf(update.getMessage().getChatId()));
-        sendMessage.setText("Ism sharifingizni kriting.");
-        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
-        replyKeyboardMarkup.setSelective(true);
-        replyKeyboardMarkup.setResizeKeyboard(true);
-
-        KeyboardRow keyboardRow11 = new KeyboardRow();
-        keyboardRow11.add(new KeyboardButton("\uD83C\uDFE0 Бош меню"));
-        keyboardRow11.add(new KeyboardButton("⬅️ Орқага"));
-
-        List<KeyboardRow> keyboardRowList = new ArrayList<>(List.of(keyboardRow11));
-
-        replyKeyboardMarkup.setKeyboard(keyboardRowList);
         sendMessage.setReplyMarkup(replyKeyboardMarkup);
         sendSendMessage(sendMessage);
     }
 
     public void getDefaultAnswers(Update update) {
-        sendMessage = new SendMessage(String.valueOf(update.getMessage().getChatId()), "Noto'g'ri so'rov.");
+        sendMessage = new SendMessage(String.valueOf(update.getMessage().getChatId()), "Noto'g'ri so'rov.\nKo'rsatmaga amal qiling");
         sendSendMessage(sendMessage);
     }
 
-    public void changeLanguageService(Update update, TelegramUser telegramUser){
+    public void changeLanguageService(Update update, TelegramUser telegramUser) {
         telegramUser.setLanguage(update.getCallbackQuery().getData());
     }
 
